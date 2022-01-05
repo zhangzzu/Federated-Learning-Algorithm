@@ -39,7 +39,7 @@ class Server(nn.Module):
 
             w_glob = FedAvg(w_locals)
 
-            # copy weight to net_glob
+            # copy weight to model
             self.model.load_state_dict(w_glob)
 
             # print loss
