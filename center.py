@@ -1,4 +1,5 @@
 from torch import nn
+import torch
 import copy
 import torch.optim as optim
 from dataset import mnist_iid, noniid_data, mnist_test
@@ -6,6 +7,11 @@ import torch.nn.functional as F
 
 from client import Client
 from algorithm import FedAvg
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class Server(nn.Module):
@@ -27,6 +33,8 @@ class Server(nn.Module):
         dict_users = mnist_iid(self.num_clients)
         w_locals = []
         loss_locals = []
+
+        loss_train = []
         for iter in range(self.epoch):
             w_locals = []
             for idx in range(self.num_clients):
@@ -41,11 +49,18 @@ class Server(nn.Module):
 
             # copy weight to model
             self.model.load_state_dict(w_glob)
+            # torch.save(self.model.state_dict(), 'model.pt')
+            # print("w_glob size:", os.path.getsize('model.pt'))
 
             # print loss
             loss_avg = sum(loss_locals) / len(loss_locals)
             print('Round {:3d}, Average loss {:.3f}'.format(iter, loss_avg))
+            loss_train.append(loss_avg)
 
+        plt.figure()
+        plt.plot(range(len(loss_train)), loss_train)
+        plt.ylabel('train_loss')
+        plt.show()
         # w_glob = Server.FedAvg(w_locals)
         # self.model.load_state_dict(w_glob)
 
