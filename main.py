@@ -17,7 +17,7 @@ from options import args_parser
 if __name__ == "__main__":
     use_cuda = nn.cuda.is_available()
     device = nn.device("cuda" if use_cuda else "cpu")
-    num_clients = 20
+    num_clients = 50
     # 训练参数
     args = args_parser()
     args.epochs = 10
