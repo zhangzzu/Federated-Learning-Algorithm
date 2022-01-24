@@ -36,13 +36,15 @@ class Server(nn.Module):
         loss_locals = []
 
         loss_train = []
+        train_clients = [Client(copy.deepcopy(self.model), noniid_data(dict_users[i]), 1, self.device)
+                         for i in range(self.num_clients)]
         model_up_size = 0
         for iter in range(self.epoch):
             w_locals = []
             for idx in range(self.num_clients):
-                train_client = Client(copy.deepcopy(self.model),
-                                      noniid_data(dict_users[idx]), 1, self.device)
-                w, loss = train_client.train()
+                # train_client = Client(copy.deepcopy(self.model),
+                #                       noniid_data(dict_users[idx]), 1, self.device)
+                w, loss = train_clients[idx].train()
                 print("client ", idx, "loss is ", loss)
                 w_locals.append(copy.deepcopy(w))
                 loss_locals.append(copy.deepcopy(loss))
@@ -52,6 +54,9 @@ class Server(nn.Module):
 
             # copy weight to model
             self.model.load_state_dict(w_glob)
+
+            for i in range(self.num_clients):
+                train_clients[i].recv(w_glob.copy())
             # torch.save(self.model.state_dict(), 'model.pt')
             # print("w_glob size:", os.path.getsize('model.pt'))
 
@@ -94,4 +99,4 @@ class Server(nn.Module):
         accuracy = 100.00 * correct / len(data_loader.dataset)
         print('\nTest set: Average loss: {:.4f} \nAccuracy: {}/{} ({:.2f}%)\n'.format(
             test_loss, correct, len(data_loader.dataset), accuracy))
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()

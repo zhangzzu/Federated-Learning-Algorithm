@@ -17,10 +17,10 @@ from options import args_parser
 if __name__ == "__main__":
     use_cuda = nn.cuda.is_available()
     device = nn.device("cuda" if use_cuda else "cpu")
-    num_clients = 50
+    num_clients = 5
     # 训练参数
     args = args_parser()
-    args.epochs = 10
+    args.epochs = 5
     args.num_clients = num_clients
     args.model = Model().to(device)
     args.dataset = mnist_noniid(num_clients)
