@@ -1,3 +1,4 @@
+from compressed import prune
 from utils import get_up_bits
 import numpy as np
 import matplotlib.pyplot as plt
@@ -43,6 +44,7 @@ class Server(nn.Module):
                 train_client = Client(copy.deepcopy(self.model),
                                       noniid_data(dict_users[idx]), 1, self.device)
                 w, loss = train_client.train()
+                w = prune(w, self.device)
                 print("client ", idx, "loss is ", loss)
                 w_locals.append(copy.deepcopy(w))
                 loss_locals.append(copy.deepcopy(loss))
