@@ -1,8 +1,10 @@
 # Application of FL task
-from models import Model
+from ast import arg
+from statistics import mode
+from models import CNN, VGG11
 import torch as nn
 
-from dataset import mnist_noniid
+from dataset import mnist_iid, mnist_noniid
 from center import Server
 from options import args_parser
 
@@ -17,15 +19,22 @@ from options import args_parser
 if __name__ == "__main__":
     use_cuda = nn.cuda.is_available()
     device = nn.device("cuda" if use_cuda else "cpu")
-    num_clients = 40
+    traing_model = "CNN"
+    traing_dataset = "mnist"
+    num_clients = 5
+    num_epochs =5
     # 训练参数
     args = args_parser()
-    args.epochs = 10
+    args.epochs = num_epochs
     args.num_clients = num_clients
-    args.model = Model().to(device)
-    args.dataset = mnist_noniid(num_clients)
+    # args.model = models.vgg11(pretrained=True).to(device)
+    if(traing_model == "CNN"):
+        args.model = CNN().to(device)
+    elif(traing_model == "VGG"):
+        arg.model = VGG11().to(device)
+    args.dataset = mnist_iid(num_clients, traing_dataset)
     args.device = device
 
     fl_entity = Server(args).to(device)
     fl_entity.train()
-    fl_entity.test_img()
+    fl_entity.test_img(traing_dataset)

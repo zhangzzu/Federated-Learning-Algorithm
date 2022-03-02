@@ -2,10 +2,12 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import numpy as np
 
 
 class LogisticRegression(nn.Module):
     """A simple implementation of Logistic regression model"""
+
     def __init__(self, num_feature, output_size):
         super(LogisticRegression, self).__init__()
         self.linear = nn.Linear(num_feature, output_size)
@@ -16,6 +18,7 @@ class LogisticRegression(nn.Module):
 
 class MLP(nn.Module):
     """A simple implementation of Deep Neural Network model"""
+
     def __init__(self, input_dim, output_dim):
         super(MLP, self).__init__()
         self.h1 = 600
@@ -25,26 +28,27 @@ class MLP(nn.Module):
             nn.Linear(input_dim, 600),
             nn.Dropout(0.2),
             nn.ReLU(),
-            
+
             nn.Linear(600, 300),
             nn.Dropout(0.2),
             nn.ReLU(),
-            
+
             nn.Linear(300, 100),
             nn.Dropout(0.2),
             nn.ReLU(),
-            
+
             nn.Linear(100, output_dim))
 
     def forward(self, x):
         return self.model(x)
 
-class Model(nn.Module):
+
+class CNN(nn.Module):
     def __init__(self):
-        super(Model, self).__init__()
+        super(CNN, self).__init__()
         # imput 输入是1*28*28,通道是1;kernel_zise 5*5的卷积核
         # 经过conv1，通道变为10*24*24
-        #in_channels, out_channels
+        # 1:in_channels, 10:out_channels
         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
         # 2*2的池化层
@@ -75,13 +79,13 @@ class MnistCNN(nn.Module):
             nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.MaxPool2d(2))
-        
+
         self.layer2 = nn.Sequential(
             nn.Conv2d(16, 32, kernel_size=5, padding=2),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(2))
-        
+
         self.fc = nn.Linear(7 * 7 * 32, 10)
 
     def forward(self, x):
@@ -90,3 +94,51 @@ class MnistCNN(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
+
+
+class VGG(nn.Module):
+    '''
+    VGG model 
+    '''
+
+    def __init__(self, features, size=512, out=10):
+        super(VGG, self).__init__()
+        self.features = features
+        self.classifier = nn.Sequential(
+            # nn.Dropout(),
+            nn.Linear(size, size),
+            nn.ReLU(True),
+            # nn.Dropout(),
+            nn.Linear(size, size),
+            nn.ReLU(True),
+            nn.Linear(size, out),
+        )
+        # Initialize weights
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, np.sqrt(2. / n))
+                m.bias.data.zero_()
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return x
+
+
+def make_layers(cfg):
+    layers = []
+    in_channels = 3
+    for v in cfg:
+        if v == 'M':
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+        else:
+            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+            layers += [conv2d, nn.ReLU(inplace=True)]
+            in_channels = v
+    return nn.Sequential(*layers)
+
+
+def VGG11():
+    return VGG(make_layers([64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M']))

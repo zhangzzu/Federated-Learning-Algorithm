@@ -1,3 +1,4 @@
+from cgi import test
 from compressed import prune
 from utils import get_up_bits
 import numpy as np
@@ -7,7 +8,7 @@ from torch import nn
 import torch
 import copy
 import torch.optim as optim
-from dataset import mnist_iid, noniid_data, mnist_test
+from dataset import mnist_iid, noniid_data, data_test, iid_data
 import torch.nn.functional as F
 
 from client import Client
@@ -30,9 +31,10 @@ class Server(nn.Module):
         self.num_clients = args.num_clients
         self.dataset = args.dataset
         self.model = args.model
+        self.traing_dataset = 'mnist'
 
     def train(self):
-        dict_users = mnist_iid(self.num_clients)
+        dict_users = iid_data(self.num_clients)
         w_locals = []
         loss_locals = []
 
@@ -44,7 +46,7 @@ class Server(nn.Module):
                 train_client = Client(copy.deepcopy(self.model),
                                       noniid_data(dict_users[idx]), 1, self.device)
                 w, loss = train_client.train()
-                w = prune(w, self.device)
+                # w = prune(w, self.device)
                 print("client ", idx, "loss is ", loss)
                 w_locals.append(copy.deepcopy(w))
                 loss_locals.append(copy.deepcopy(loss))
@@ -72,13 +74,28 @@ class Server(nn.Module):
         # w_glob = Server.FedAvg(w_locals)
         # self.model.load_state_dict(w_glob)
 
-    def test_img(self):
+    def test_acc(self):
+        self.model.eval()
+        correct = 0
+        total = 0
+        test_loader = data_test('mnist')
+        with torch.no_grad():
+            for data in test_loader:
+                img, labels = data
+                out = self.model(img)
+                _, pre = torch.max(out.data, dim=1)
+                total += labels.size(0)
+                correct += (pre == labels).sum().item()
+
+        print("accuracy on test set : %d %%" % (100*correct/total))
+
+    def test_img(self, traing_dataset):
         # 仅仅是推论出结果，不改变该层次中的各个参数
         self.model.eval()
         # testing
         test_loss = 0
         correct = 0
-        data_loader = mnist_test()
+        data_loader = data_test(traing_dataset)
         l = len(data_loader)
         for idx, (data, target) in enumerate(data_loader):
             if self.device.type == 'cuda':

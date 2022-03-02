@@ -9,8 +9,13 @@ batch_size = 10
 transform = transforms.Compose(
     [transforms.ToTensor(), transforms.Normalize((0.1307), (0.3081,))])
 
-train_dataset = datasets.MNIST(
-    root='./data', train=True, download=True, transform=transform)
+
+train_dataset = {
+    'mnist': datasets.MNIST(
+        root='./data', train=True, download=True, transform=transform),
+    'cifar10': datasets.CIFAR10(
+        root='./data', train=True, download=True, transform=transform)}
+
 
 # test_loader = DataLoader(test_dataset, shuffle=True, batch_size=batch_size)
 
@@ -18,7 +23,7 @@ train_dataset = datasets.MNIST(
 class DatasetSplit(Dataset):
     def __init__(self, dataset, idxs):
         self.dataset = dataset
-        self.idxs = list(idxs)
+        self.idxs = idxs
 
     def __len__(self):
         return len(self.idxs)
@@ -28,11 +33,43 @@ class DatasetSplit(Dataset):
         return datas, labels
 
 
-def mnist_iid(num_users):
+def iid_data(client_num):
+
+    train_dataset1 = train_dataset['mnist']
+    # 训练数据的标签
+    targets = train_dataset1.targets
+    # 训练数据的分类
+    classes = train_dataset1.classes
+    # 字典类型 key:训练数据分类 value:该分类在训练数据中的位置
+    sort_datasets = {}
+
+    for i in range(len(classes)):
+        sort_datasets[i] = []
+
+    for i in range(len(targets)):
+        sort_datasets[int(targets[i])].append(i)
+        # sort[targets[i]].append(i)
+
+    # client 对应的数据字典 key:client的编号 value:该client中iid数据的位置
+    dict_users = {}
+    for i in range(len(classes)):
+        dict_users[i] = []
+        for j in range(len(sort_datasets)):
+            # 分类均分，将每一类数据均分到client的数据集中
+            avg_num = len(sort_datasets[j])//client_num
+            #获取对应分类的value，并将对应的avg_num区间数据切片、拼接到dict_users中
+            l = sort_datasets[j]
+            l = l[i*avg_num:(i+1)*avg_num-1]
+            dict_users[i].extend(l)
+
+    return dict_users
+
+
+def mnist_iid(num_users, traning_dataset):
     """
     Sample I.I.D. client data from MNIST dataset
     """
-    data_len = len(train_dataset)
+    data_len = len(train_dataset[traning_dataset])
     num_items = int(data_len/num_users)
     dict_users, all_idxs = {}, [i for i in range(data_len)]
     # 将数据按num_users的数量平均划分，放到dict_users数组中
@@ -87,8 +124,9 @@ def mnist_noniid(num_users):
 
 
 def noniid_data(indx):
-    dataset = DatasetSplit(train_dataset, indx)
-    return DataLoader(dataset, shuffle=True, batch_size=batch_size)
+    dataset = DatasetSplit(train_dataset['mnist'], indx)
+    data = DataLoader(dataset, shuffle=True, batch_size=batch_size)
+    return data
 
 
 def mnist_noniid_a(num_users):
@@ -118,9 +156,13 @@ def mnist_noniid_a(num_users):
     return DataLoader(dataset, shuffle=True, batch_size=batch_size)
 
 
-def mnist_test():
-    test_dataset = datasets.MNIST(
-        root='./data', train=False, download=True, transform=transform)
+def data_test(traing_dataset):
+    if(traing_dataset == "mnist"):
+        test_dataset = datasets.MNIST(
+            root='./data', train=False, download=True, transform=transform)
+    elif(traing_dataset == "cifar10"):
+        test_dataset = datasets.CIFAR10(
+            root='./data', train=False, download=True, transform=transform)
     return DataLoader(test_dataset, shuffle=True, batch_size=batch_size)
 
 
