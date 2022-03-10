@@ -8,7 +8,7 @@ from torch import nn
 import torch
 import copy
 import torch.optim as optim
-from dataset import mnist_iid, noniid_data, data_test, iid_data
+from dataset import mnist_iid, noniid_data, data_test, iid_data,non_iid_data
 import torch.nn.functional as F
 
 from client import Client
@@ -34,7 +34,7 @@ class Server(nn.Module):
         self.traing_dataset = 'mnist'
 
     def train(self):
-        dict_users = iid_data(self.num_clients)
+        dict_users = non_iid_data(self.num_clients)
         w_locals = []
         loss_locals = []
 

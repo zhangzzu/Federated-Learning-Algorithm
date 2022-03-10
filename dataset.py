@@ -1,7 +1,11 @@
+from distutils.command.clean import clean
+from wsgiref.headers import tspecials
 import numpy as np
+from torch import classes
 from torchvision import datasets, transforms
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset, dataset
+import copy
 
 # 批处理大小
 batch_size = 10
@@ -33,14 +37,13 @@ class DatasetSplit(Dataset):
         return datas, labels
 
 
-def iid_data(client_num):
-
+def sort_traindata():
     train_dataset1 = train_dataset['mnist']
     # 训练数据的标签
     targets = train_dataset1.targets
     # 训练数据的分类
     classes = train_dataset1.classes
-    # 字典类型 key:训练数据分类 value:该分类在训练数据中的位置
+
     sort_datasets = {}
 
     for i in range(len(classes)):
@@ -50,17 +53,73 @@ def iid_data(client_num):
         sort_datasets[int(targets[i])].append(i)
         # sort[targets[i]].append(i)
 
+    return sort_datasets, classes
+
+
+def iid_data(client_num):
+
+    sort_datasets, classes = sort_traindata()
+
     # client 对应的数据字典 key:client的编号 value:该client中iid数据的位置
     dict_users = {}
-    for i in range(len(classes)):
+    for i in range(client_num):
         dict_users[i] = []
         for j in range(len(sort_datasets)):
             # 分类均分，将每一类数据均分到client的数据集中
             avg_num = len(sort_datasets[j])//client_num
-            #获取对应分类的value，并将对应的avg_num区间数据切片、拼接到dict_users中
+            # 获取对应分类的value，并将对应的avg_num区间数据切片、拼接到dict_users中
             l = sort_datasets[j]
             l = l[i*avg_num:(i+1)*avg_num-1]
             dict_users[i].extend(l)
+
+    return dict_users
+
+
+def data_split(data, num_split):
+    # 将分类数据中的每一类分割成num_split份
+    delta, r = len(data) // num_split, len(data) % num_split
+    data_lst = []
+    i, used_r = 0, 0
+    while i < len(data):
+        if used_r < r:
+            data_lst.append(data[i:i+delta+1])
+            i += delta + 1
+            used_r += 1
+        else:
+            data_lst.append(data[i:i+delta])
+            i += delta
+    return data_lst
+
+
+def choose_two_digit(split_data_lst):
+    available_digit = []
+    for i, digit in enumerate(split_data_lst):
+        if len(digit) > 0:
+            available_digit.append(i)
+    try:
+        lst = np.random.choice(available_digit, 1, replace=False).tolist()
+    except:
+        print(available_digit)
+    return lst
+
+
+def non_iid_data(client_num):
+    sort_datasets, classes = sort_traindata()
+
+    split_mnist_traindata = []
+    for digit in sort_datasets.values():
+        split_mnist_traindata.append(data_split(digit, 1))
+
+    # client 对应的数据字典 key:client的编号 value:该client中iid数据的位置
+    dict_users = {}
+    for i in range(client_num):
+        lst = []
+        for j in split_mnist_traindata:
+            if j != []:
+                lst.extend(np.array(j).flatten().reshape(1, -1)[0])
+        dict_users[i] = lst
+        for d in choose_two_digit(split_mnist_traindata):
+            split_mnist_traindata[d].pop()
 
     return dict_users
 
@@ -98,7 +157,7 @@ def mnist_noniid(num_users):
     # 生成一个60000的数组
     idxs = np.arange(num_shards*num_imgs)
     # 得到数据集的label标签 numpy 格式
-    labels = train_dataset.train_labels.numpy()
+    labels = train_dataset['mnist'].train_labels.numpy()
 
     # sort labels
     # 将两个数组[1,2][3,4]  合并成[[1,2][3,4]]
@@ -167,5 +226,5 @@ def data_test(traing_dataset):
 
 
 if __name__ == "__main__":
-    data = mnist_noniid(3)
+    data = non_iid_data(10)
     print(data)

@@ -4,7 +4,7 @@ from statistics import mode
 from models import CNN, VGG11
 import torch as nn
 
-from dataset import mnist_iid, mnist_noniid
+from dataset import mnist_iid, mnist_noniid,non_iid_data
 from center import Server
 from options import args_parser
 
@@ -21,8 +21,8 @@ if __name__ == "__main__":
     device = nn.device("cuda" if use_cuda else "cpu")
     traing_model = "CNN"
     traing_dataset = "mnist"
-    num_clients = 5
-    num_epochs =5
+    num_clients = 10
+    num_epochs = 1
     # 训练参数
     args = args_parser()
     args.epochs = num_epochs
@@ -32,9 +32,11 @@ if __name__ == "__main__":
         args.model = CNN().to(device)
     elif(traing_model == "VGG"):
         arg.model = VGG11().to(device)
-    args.dataset = mnist_iid(num_clients, traing_dataset)
+    args.dataset = non_iid_data(num_clients)
     args.device = device
 
     fl_entity = Server(args).to(device)
     fl_entity.train()
     fl_entity.test_img(traing_dataset)
+
+    
