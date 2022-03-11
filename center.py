@@ -8,7 +8,7 @@ from torch import nn
 import torch
 import copy
 import torch.optim as optim
-from dataset import mnist_iid, noniid_data, data_test, iid_data,non_iid_data
+from dataset import training_data, data_test, iid_data, non_iid_data
 import torch.nn.functional as F
 
 from client import Client
@@ -32,9 +32,13 @@ class Server(nn.Module):
         self.dataset = args.dataset
         self.model = args.model
         self.traing_dataset = 'mnist'
+        self.y = args.y
 
     def train(self):
-        dict_users = non_iid_data(self.num_clients)
+        if(self.dataset == "non-iid"):
+            dict_users = non_iid_data(self.num_clients, self.y)
+        elif (self.dataset == "iid"):
+            dict_users = iid_data(self.num_clients)
         w_locals = []
         loss_locals = []
 
@@ -44,7 +48,7 @@ class Server(nn.Module):
             w_locals = []
             for idx in range(self.num_clients):
                 train_client = Client(copy.deepcopy(self.model),
-                                      noniid_data(dict_users[idx]), 1, self.device)
+                                      training_data(dict_users[idx]), 1, self.device)
                 w, loss = train_client.train()
                 # w = prune(w, self.device)
                 print("client ", idx, "loss is ", loss)

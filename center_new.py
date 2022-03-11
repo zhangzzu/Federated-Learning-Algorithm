@@ -6,7 +6,7 @@ from torch import nn
 import torch
 import copy
 import torch.optim as optim
-from dataset import mnist_iid, noniid_data, mnist_test
+from dataset import mnist_iid, training_data, mnist_test
 import torch.nn.functional as F
 
 from client import Client
@@ -36,7 +36,7 @@ class Server(nn.Module):
         loss_locals = []
 
         loss_train = []
-        train_clients = [Client(copy.deepcopy(self.model), noniid_data(dict_users[i]), 1, self.device)
+        train_clients = [Client(copy.deepcopy(self.model), training_data(dict_users[i]), 1, self.device)
                          for i in range(self.num_clients)]
         model_up_size = 0
         for iter in range(self.epoch):
