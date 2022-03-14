@@ -21,7 +21,7 @@ if __name__ == "__main__":
     device = nn.device("cuda" if use_cuda else "cpu")
     traing_model = "CNN"
     traing_dataset = "mnist"
-    num_clients = 10
+    num_clients = 30
     num_epochs = 10
     # 训练参数
     args = args_parser()
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     elif(traing_model == "VGG"):
         arg.model = VGG11().to(device)
     args.dataset = "non-iid"  # iid or non-iid
-    args.y = 1
+    args.y =1
     args.device = device
 
     fl_entity = Server(args).to(device)

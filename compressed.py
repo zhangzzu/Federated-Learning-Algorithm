@@ -5,22 +5,36 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+# 设置单个客户端的稀疏率
 def prune(w, device):
     w_compressed = {name: torch.zeros(value.shape).to(
         device) for name, value in w.items()}
     for name in w.keys():
         # kmeans_c(w[name].data.clone())
-        w_compressed[name].data = compress_fun(w[name].data.clone(), device)
+        if(name.find('bias') < 0):
+            w_compressed[name].data = compress_fun(
+                w[name].data.clone(), device)
+        else:
+            w_compressed[name].data = w[name].data.clone()
 
     return w_compressed
 
 
+# bias 不压缩
 def compress_fun(T, device):
     # T>=v 的值 替换为mean，其他替换为0
-    out_ = torch.where(T >= 0.5, T, torch.Tensor([0.0]).to(device))
-    # 同上，其他替换位out_中对应位置的值
-    out = torch.where(T <= -0.5, T, out_)
-
+    T_abs = torch.abs(T)
+    T_num = T_abs.numel()
+    T_top, T_pos = torch.topk(
+        T_abs.flatten(), T_num-int(T_num*0.9), largest=False)
+    org_shape = T.shape
+    T = T.flatten()
+    for i in T_pos.tolist():
+        T[i] = torch.Tensor([0.0]).to(device)
+    # out_ = torch.where(T >= 1, T, torch.Tensor([0.0]).to(device))
+    # # 同上，其他替换位out_中对应位置的值
+    # out = torch.where(T <= -1, T, out_)
+    out = T.reshape(org_shape)
     return out
 
 
@@ -29,7 +43,7 @@ def compress_fun(T, device):
 #     if(tensor_len == 1):
 #         return
 #     x = x.view(x.size()[0], -1).view(-1, 1)
-    
+
 #     features=np.column_stack((x,np.ones(len(x))))
 #     whitened = whiten(features)
 #     codebook, distortion = kmeans(whitened, 100)
@@ -38,7 +52,6 @@ def compress_fun(T, device):
 #     plt.scatter(features[:, 0], features[:, 1])
 #     # plt.scatter(codebook[:, 0], codebook[:, 1], c='r')
 #     plt.show()
-
 
 
 def kmeans1(x, ncluster, niter=10):

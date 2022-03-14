@@ -1,6 +1,6 @@
 from cgi import test
 from compressed import prune
-from utils import get_up_bits
+from utils import get_up_bits, get_sparsity_rate
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
@@ -50,11 +50,17 @@ class Server(nn.Module):
                 train_client = Client(copy.deepcopy(self.model),
                                       training_data(dict_users[idx]), 1, self.device)
                 w, loss = train_client.train()
-                # w = prune(w, self.device)
-                print("client ", idx, "loss is ", loss)
+                w = prune(w, self.device)
+
                 w_locals.append(copy.deepcopy(w))
                 loss_locals.append(copy.deepcopy(loss))
                 model_up_size += get_up_bits(w)
+
+                # print sparsity_rate non pruning
+                spar, k, k_zero = get_sparsity_rate(w)
+                print("client ", idx, "loss is ", loss,
+                      "sparsity_rate is %.2f" % spar, "parameter num is ", k,
+                      "parameter zero num is", k_zero)
 
             w_glob = FedAvg(w_locals)
 

@@ -31,7 +31,7 @@ class Client(nn.Module):
         '''
         # 交叉熵loss y*log p(y)
         criterion = nn.CrossEntropyLoss()
-        # sgd 随机梯度下降方法 超参数魏0.01,momentum 冲量 跳出局部优化
+        # sgd 随机梯度下降方法 超参数0.01,momentum 冲量 跳出局部优化
         optimizer = optim.SGD(self.model.parameters(), lr=0.1, momentum=0.5)
         self.model.train()
         epoch_loss = []
